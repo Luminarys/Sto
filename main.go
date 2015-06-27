@@ -1,20 +1,19 @@
 package main
 
 import (
-    "net/http"
 	"bytes"
 	"crypto/md5"
 	"fmt"
 	"github.com/hoisie/web"
 	"io"
 	"io/ioutil"
-//	"bufio"
+	"net/http"
+	"encoding/csv"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
-    "encoding/csv"
 )
 
 func RandFileName(prefix, suffix string) string {
@@ -36,53 +35,53 @@ func Md5(r io.Reader) string {
 }
 
 func handlePost(ctx *web.Context, updateURL chan<- string) string {
-    //TODO: Implemente limits with settings.ini or something
-    err := ctx.Request.ParseMultipartForm(50 * 1024 * 1024)
-    if err != nil {
-        return "Error handling form!\n"
-    }
+	//TODO: Implemente limits with settings.ini or something
+	err := ctx.Request.ParseMultipartForm(50 * 1024 * 1024)
+	if err != nil {
+		return "Error handling form!\n"
+	}
 	form := ctx.Request.MultipartForm
 	var output bytes.Buffer
 
 	fileHeader := form.File["file"][0]
 	filename := fileHeader.Filename
 	file, err := fileHeader.Open()
-    size, err := file.Seek(0, 2)
-    if err != nil {
-        return "Error parsing file!\n"
-    }
-    if size > 50 * 1024 * 1024 {
-        return "File too big!\n"
-    }
-    //Seek back to beginning
-    file.Seek(0, 0)
+	size, err := file.Seek(0, 2)
+	if err != nil {
+		return "Error parsing file!\n"
+	}
+	if size > 50*1024*1024 {
+		return "File too big!\n"
+	}
+	//Seek back to beginning
+	file.Seek(0, 0)
 	if err != nil {
 		return err.Error()
 	}
 	hash := Md5(file)
-    //If file doesn't already exist, create it
-    if _, err := os.Stat("files/" + hash); os.IsNotExist(err) {
-        f, err := os.Create("files/" + hash)
-        if err != nil {
-            return "Error, file could not be written to.\n"
-        }
-        _, err = file.Seek(0, 0)
-        if err != nil {
-            return "Error reading the file\n"
-        }
-        _, err = io.Copy(f, file)
-        if err != nil {
-            return "Error, file could not be written to.\n"
-        }
-    }
+	//If file doesn't already exist, create it
+	if _, err := os.Stat("files/" + hash); os.IsNotExist(err) {
+		f, err := os.Create("files/" + hash)
+		if err != nil {
+			return "Error, file could not be written to.\n"
+		}
+		_, err = file.Seek(0, 0)
+		if err != nil {
+			return "Error reading the file\n"
+		}
+		_, err = io.Copy(f, file)
+		if err != nil {
+			return "Error, file could not be written to.\n"
+		}
+	}
 
-    extension := filepath.Ext(filename)
-    name := filename[0:len(filename)-len(extension)]
-    name = RandFileName(name, extension)
+	extension := filepath.Ext(filename)
+	name := filename[0 : len(filename)-len(extension)]
+	name = RandFileName(name, extension)
 	output.WriteString("name: " + name)
 	//Send the URL for updating
 	updateURL <- name + ":" + hash
-    return output.String() + "\n"
+	return output.String() + "\n"
 }
 
 func handleGet(ctx *web.Context, val string, getURL chan<- string, sendURL <-chan string) string {
@@ -91,21 +90,21 @@ func handleGet(ctx *web.Context, val string, getURL chan<- string, sendURL <-cha
 	if res == "" {
 		return "File not found\n"
 	} else {
-        r, err := ioutil.ReadFile("files/" + res)
-        if err != nil {
-            return "Error reading file!\n"
-        }
-        f, err := os.Open("files/" + res)
-        if err != nil {
-            return "Error reading file!\n"
-        }
-        mime := http.DetectContentType(r)
-        //This is weird - ServeContent supposedly handles MIME setting
-        //But the Webgo content setter needs to be used too
-        //In addition, ServeFile doesn't work, ServeContent has to be used
-        ctx.ContentType(mime)
-        http.ServeContent(ctx.ResponseWriter, ctx.Request, "files/" + res, time.Now(), f)
-        return ""
+		r, err := ioutil.ReadFile("files/" + res)
+		if err != nil {
+			return "Error reading file!\n"
+		}
+		f, err := os.Open("files/" + res)
+		if err != nil {
+			return "Error reading file!\n"
+		}
+		mime := http.DetectContentType(r)
+		//This is weird - ServeContent supposedly handles MIME setting
+		//But the Webgo content setter needs to be used too
+		//In addition, ServeFile doesn't work, ServeContent has to be used
+		ctx.ContentType(mime)
+		http.ServeContent(ctx.ResponseWriter, ctx.Request, "files/"+res, time.Now(), f)
+		return ""
 	}
 }
 
@@ -114,22 +113,29 @@ func handleGet(ctx *web.Context, val string, getURL chan<- string, sendURL <-cha
 func handleURLs(getURL <-chan string, sendURL chan<- string, updateURL <-chan string) {
 	//Read in the CSV, then wait for updates
 	urls := make(map[string]string)
-    fin, err := os.Open("files.csv")
+	if _, err := os.Stat("files.csv"); os.IsNotExist(err) {
+		f, err := os.Create("files.csv")
+		if err != nil {
+			panic("Fatal Error, files.csv could not be created")
+		}
+		f.Close()
+	}
+	fin, err := os.Open("files.csv")
 	if err != nil {
 		panic("Fatal Error, files.csv could not be opened.")
 	}
 
-    reader := csv.NewReader(fin)
-    data, err := reader.ReadAll()
-    if err != nil {
-        panic("Fatal Error, files.csv is not formatted properly")
-    }
+	reader := csv.NewReader(fin)
+	data, err := reader.ReadAll()
+	if err != nil {
+		panic("Fatal Error, files.csv is not formatted properly")
+	}
 
-    for _, col := range data {
-        urls[col[0]] = col[1]
-    }
+	for _, col := range data {
+		urls[col[0]] = col[1]
+	}
 
-    fin.Close()
+	fin.Close()
 
 	fout, err := os.OpenFile("files.csv", os.O_APPEND|os.O_WRONLY, 0660)
 	if err != nil {
@@ -147,7 +153,7 @@ func handleURLs(getURL <-chan string, sendURL chan<- string, updateURL <-chan st
 				sendURL <- ""
 			}
 		case update := <-updateURL:
-            //TODO - Verify that there isn't an existing entry in the map
+			//TODO - Verify that there isn't an existing entry in the map
 			s := strings.Split(update, ":")
 			urls[s[0]] = s[1]
 			fmt.Println("Updated URLs")
