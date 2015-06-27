@@ -3,20 +3,22 @@ package main
 import (
 	"bytes"
 	"crypto/md5"
+	"encoding/csv"
 	"fmt"
 	"github.com/hoisie/web"
 	"io"
 	"io/ioutil"
-	"net/http"
-	"encoding/csv"
 	"math/rand"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
-func RandFileName(prefix, suffix string) string {
+//Generates a random file name and appends on the provided
+//extension.
+func RandFileName(ext string) string {
 	s := rand.NewSource(time.Now().UTC().UnixNano())
 	r := rand.New(s)
 	alphabet := "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -25,16 +27,19 @@ func RandFileName(prefix, suffix string) string {
 		idx := r.Intn(len(alphabet))
 		name += string(alphabet[idx])
 	}
-	return filepath.Join(name + suffix)
+	return filepath.Join(name + ext)
 }
 
+//Returns MD5 hash of a provided file
 func Md5(r io.Reader) string {
 	hash := md5.New()
 	io.Copy(hash, r)
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
-func handlePost(ctx *web.Context, updateURL chan<- string) string {
+//Handles POST upload requests. the updateURL is used to pass messages
+//to the urlHandler indicating that the DB should be updated.
+func handleUpload(ctx *web.Context, updateURL chan<- string) string {
 	//TODO: Implemente limits with settings.ini or something
 	err := ctx.Request.ParseMultipartForm(50 * 1024 * 1024)
 	if err != nil {
@@ -63,7 +68,7 @@ func handlePost(ctx *web.Context, updateURL chan<- string) string {
 	if _, err := os.Stat("files/" + hash); os.IsNotExist(err) {
 		f, err := os.Create("files/" + hash)
 		if err != nil {
-			return "Error, file could not be written to.\n"
+			return "Error, file could not be created.\n"
 		}
 		_, err = file.Seek(0, 0)
 		if err != nil {
@@ -76,29 +81,38 @@ func handlePost(ctx *web.Context, updateURL chan<- string) string {
 	}
 
 	extension := filepath.Ext(filename)
-	name := filename[0 : len(filename)-len(extension)]
-	name = RandFileName(name, extension)
+	name := RandFileName(extension)
 	output.WriteString("name: " + name)
 	//Send the URL for updating
 	updateURL <- name + ":" + hash
 	return output.String() + "\n"
 }
 
-func handleGet(ctx *web.Context, val string, getURL chan<- string, sendURL <-chan string) string {
+//Handles file retrieval. It uses getURL to send a hash to the urlHandler, and listens on
+//sendURL for the proper filename.
+func getFile(ctx *web.Context, val string, getURL chan<- string, sendURL <-chan string) string {
 	getURL <- val
 	res := <-sendURL
 	if res == "" {
 		return "File not found\n"
 	} else {
-		r, err := ioutil.ReadFile("files/" + res)
-		if err != nil {
-			return "Error reading file!\n"
-		}
+		//Open the file
 		f, err := os.Open("files/" + res)
 		if err != nil {
 			return "Error reading file!\n"
 		}
+
+		//Get MIME
+		r, err := ioutil.ReadAll(f)
+		if err != nil {
+			return "Error reading file!\n"
+		}
 		mime := http.DetectContentType(r)
+
+		_, err = f.Seek(0, 0)
+		if err != nil {
+			return "Error reading the file\n"
+		}
 		//This is weird - ServeContent supposedly handles MIME setting
 		//But the Webgo content setter needs to be used too
 		//In addition, ServeFile doesn't work, ServeContent has to be used
@@ -175,13 +189,13 @@ func main() {
 
 	go handleURLs(getURL, sendURL, updateURL)
 
-	//Le clever. Get around their interface only allowing specific values
+	//Get around their func only allowing specific values
 	//to be passed by wrapping in a function and sending stuff from there
 	web.Post("/api/upload", func(ctx *web.Context) string {
-		return handlePost(ctx, updateURL)
+		return handleUpload(ctx, updateURL)
 	})
 	web.Get("/(.*)", func(ctx *web.Context, val string) string {
-		return handleGet(ctx, val, getURL, sendURL)
+		return getFile(ctx, val, getURL, sendURL)
 	})
-	web.Run("0.0.0.0:9999")
+	web.Run("0.0.0.0:8080")
 }
