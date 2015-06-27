@@ -37,13 +37,25 @@ func Md5(r io.Reader) string {
 
 func handlePost(ctx *web.Context, updateURL chan<- string) string {
     //TODO: Implemente limits with settings.ini or something
-	ctx.Request.ParseMultipartForm(50 * 1024 * 1024)
+    err := ctx.Request.ParseMultipartForm(50 * 1024 * 1024)
+    if err != nil {
+        return "Error handling form!\n"
+    }
 	form := ctx.Request.MultipartForm
 	var output bytes.Buffer
 
 	fileHeader := form.File["file"][0]
 	filename := fileHeader.Filename
 	file, err := fileHeader.Open()
+    size, err := file.Seek(0, 2)
+    if err != nil {
+        return "Error parsing file!\n"
+    }
+    if size > 50 * 1024 * 1024 {
+        return "File too big!\n"
+    }
+    //Seek back to beginning
+    file.Seek(0, 0)
 	if err != nil {
 		return err.Error()
 	}
@@ -52,40 +64,40 @@ func handlePost(ctx *web.Context, updateURL chan<- string) string {
     if _, err := os.Stat("files/" + hash); os.IsNotExist(err) {
         f, err := os.Create("files/" + hash)
         if err != nil {
-            return "Error, file could not be written to."
+            return "Error, file could not be written to.\n"
         }
         _, err = file.Seek(0, 0)
         if err != nil {
-            return "Error reading the file"
+            return "Error reading the file\n"
         }
         _, err = io.Copy(f, file)
         if err != nil {
-            return "Error, file could not be written to."
+            return "Error, file could not be written to.\n"
         }
     }
 
     extension := filepath.Ext(filename)
     name := filename[0:len(filename)-len(extension)]
     name = RandFileName(name, extension)
-	output.WriteString("name:" + name)
+	output.WriteString("name: " + name)
 	//Send the URL for updating
 	updateURL <- name + ":" + hash
-	return output.String()
+    return output.String() + "\n"
 }
 
 func handleGet(ctx *web.Context, val string, getURL chan<- string, sendURL <-chan string) string {
 	getURL <- val
 	res := <-sendURL
 	if res == "" {
-		return "File not found"
+		return "File not found\n"
 	} else {
         r, err := ioutil.ReadFile("files/" + res)
         if err != nil {
-            return "Error reading file!"
+            return "Error reading file!\n"
         }
         f, err := os.Open("files/" + res)
         if err != nil {
-            return "Error reading file!"
+            return "Error reading file!\n"
         }
         mime := http.DetectContentType(r)
         //This is weird - ServeContent supposedly handles MIME setting
