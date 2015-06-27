@@ -1,21 +1,23 @@
 package main
 
 import (
+    "net/http"
 	"bytes"
 	"crypto/md5"
 	"fmt"
 	"github.com/hoisie/web"
 	"io"
+	"io/ioutil"
+//	"bufio"
 	"math/rand"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
+    "encoding/csv"
 )
 
-func TempFileName(prefix, suffix string) string {
+func RandFileName(prefix, suffix string) string {
 	s := rand.NewSource(time.Now().UTC().UnixNano())
 	r := rand.New(s)
 	alphabet := "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -33,17 +35,9 @@ func Md5(r io.Reader) string {
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
-func hello(ctx *web.Context, val string) string {
-	ctx.SetHeader("X-Powered-By", "web.go", true)
-	ctx.SetHeader("X-Frame-Options", "DENY", true)
-	ctx.SetHeader("X-Frame-Options", "DENY", true)
-	ctx.SetHeader("Location", "/grill.png", true)
-	ctx.SetHeader("Connection", "close", true)
-	return "hello " + val
-}
-
-func handlePost(ctx *web.Context, val string, updateURL chan<- string) string {
-	ctx.Request.ParseMultipartForm(10 * 1024 * 1024)
+func handlePost(ctx *web.Context, updateURL chan<- string) string {
+    //TODO: Implemente limits with settings.ini or something
+	ctx.Request.ParseMultipartForm(50 * 1024 * 1024)
 	form := ctx.Request.MultipartForm
 	var output bytes.Buffer
 
@@ -54,10 +48,26 @@ func handlePost(ctx *web.Context, val string, updateURL chan<- string) string {
 		return err.Error()
 	}
 	hash := Md5(file)
-	//TODO: Parse file properly and get the ext
-	name := TempFileName(filename, ".tmp")
-	//output.WriteString("orig name: " + filename + " new name: " + TempFileName(filename, ".tmp", Md5(file)) + " hash: " + Md5(file) + "\n")
-	output.WriteString("<p>file: " + name + " " + hash + "</p>")
+    //If file doesn't already exist, create it
+    if _, err := os.Stat("files/" + hash); os.IsNotExist(err) {
+        f, err := os.Create("files/" + hash)
+        if err != nil {
+            return "Error, file could not be written to."
+        }
+        _, err = file.Seek(0, 0)
+        if err != nil {
+            return "Error reading the file"
+        }
+        _, err = io.Copy(f, file)
+        if err != nil {
+            return "Error, file could not be written to."
+        }
+    }
+
+    extension := filepath.Ext(filename)
+    name := filename[0:len(filename)-len(extension)]
+    name = RandFileName(name, extension)
+	output.WriteString("name:" + name)
 	//Send the URL for updating
 	updateURL <- name + ":" + hash
 	return output.String()
@@ -69,19 +79,53 @@ func handleGet(ctx *web.Context, val string, getURL chan<- string, sendURL <-cha
 	if res == "" {
 		return "File not found"
 	} else {
-		return "File at: " + res
+        r, err := ioutil.ReadFile("files/" + res)
+        if err != nil {
+            return "Error reading file!"
+        }
+        f, err := os.Open("files/" + res)
+        if err != nil {
+            return "Error reading file!"
+        }
+        mime := http.DetectContentType(r)
+        //This is weird - ServeContent supposedly handles MIME setting
+        //But the Webgo content setter needs to be used too
+        //In addition, ServeFile doesn't work, ServeContent has to be used
+        ctx.ContentType(mime)
+        http.ServeContent(ctx.ResponseWriter, ctx.Request, "files/" + res, time.Now(), f)
+        return ""
 	}
 }
 
-func urlHandler(getURL <-chan string, sendURL chan<- string, updateURL <-chan string) {
+//Handles URL processing by using channels with select to lock access to operations. This ensures that
+//files.csv stays updated and maps URLs to hashes(the actual file names)
+func handleURLs(getURL <-chan string, sendURL chan<- string, updateURL <-chan string) {
 	//Read in the CSV, then wait for updates
 	urls := make(map[string]string)
-	f, err := os.OpenFile("files.csv", os.O_APPEND|os.O_WRONLY, 0660)
+    fin, err := os.Open("files.csv")
 	if err != nil {
-		fmt.Println("Warning, file could not be opened.")
+		panic("Fatal Error, files.csv could not be opened.")
 	}
 
-	defer f.Close()
+    reader := csv.NewReader(fin)
+    data, err := reader.ReadAll()
+    if err != nil {
+        panic("Fatal Error, files.csv is not formatted properly")
+    }
+
+    for _, col := range data {
+        urls[col[0]] = col[1]
+    }
+
+    fin.Close()
+
+	fout, err := os.OpenFile("files.csv", os.O_APPEND|os.O_WRONLY, 0660)
+	if err != nil {
+		panic("Fatal Error, files.csv could not be opened.")
+	}
+
+	defer fout.Close()
+
 	for {
 		select {
 		case read := <-getURL:
@@ -91,13 +135,14 @@ func urlHandler(getURL <-chan string, sendURL chan<- string, updateURL <-chan st
 				sendURL <- ""
 			}
 		case update := <-updateURL:
+            //TODO - Verify that there isn't an existing entry in the map
 			s := strings.Split(update, ":")
 			urls[s[0]] = s[1]
 			fmt.Println("Updated URLs")
-			//Write changes to file
+			//Write changes to file with timestamp for convenience
 			t := time.Now().UTC()
 			nl := s[0] + "," + s[1] + "," + t.Format("2006-01-02 15:04:05") + "\n"
-			if _, err := f.WriteString(nl); err != nil {
+			if _, err := fout.WriteString(nl); err != nil {
 				fmt.Println("Warning, file could not be written to.")
 				fmt.Println(err.Error())
 			}
@@ -110,12 +155,12 @@ func main() {
 	sendURL := make(chan string)
 	updateURL := make(chan string)
 
-	go urlHandler(getURL, sendURL, updateURL)
+	go handleURLs(getURL, sendURL, updateURL)
 
 	//Le clever. Get around their interface only allowing specific values
 	//to be passed by wrapping in a function and sending stuff from there
-	web.Post("(/api/upload)", func(ctx *web.Context, val string) string {
-		return handlePost(ctx, val, updateURL)
+	web.Post("/api/upload", func(ctx *web.Context) string {
+		return handlePost(ctx, updateURL)
 	})
 	web.Get("/(.*)", func(ctx *web.Context, val string) string {
 		return handleGet(ctx, val, getURL, sendURL)
