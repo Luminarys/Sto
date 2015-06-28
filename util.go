@@ -16,7 +16,7 @@ func RandFileName(ext string) string {
 	r := rand.New(s)
 	alphabet := "abcdefghijklmnopqrstuvwxyz0123456789"
 	name := ""
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 6; i++ {
 		idx := r.Intn(len(alphabet))
 		name += string(alphabet[idx])
 	}

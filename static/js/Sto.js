@@ -1279,7 +1279,7 @@ $(function () {
 	})
 
 	var MAX_SIZE = (function (node) {
-		var max = node.attr('data-max-size') || '10MiB'
+		var max = '10MiB'
 		var num = parseInt(/([0-9,]+).*/.exec(max)[1].replace(',', ''))
 		var unit = /(?:([KMGTPEZY])(i)?B|([BKMGTPEZY]))/.exec(max) || ["B","",""]
 
@@ -1322,7 +1322,6 @@ $(function () {
 
 		var totalRow = createRow('', files.humanSize, 'total')
 		totalRow.appendTo(uploadFiles)
-
 		if (files.size > MAX_SIZE) {
 			uploadFiles.addClass('error')
 
@@ -1389,10 +1388,3 @@ $(function () {
 		up.upload()
 	})
 })
-//Set the grill
-$(document).ready(function() {
-    chinese_cartoon_pics = ["2.png", "3.png", "4.png", "5.png", "6.png", "7.png", "8.png", "9.png", "10.png", ]
-    var grill = "/img/" + chinese_cartoon_pics[Math.floor(Math.random()*chinese_cartoon_pics.length)];
-    $("body").css("background-image", "url(" + grill + "), url(/img/bg.png/");
-
-});

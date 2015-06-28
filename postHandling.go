@@ -34,7 +34,7 @@ func throwErr(arr *[]jsonFile) string {
 //to the urlHandler indicating that the DB should be updated.
 func handleUpload(ctx *web.Context, updateURL chan<- string, updateResp <-chan *Response) string {
 	//TODO: Implemente limits with settings.ini or something
-	err := ctx.Request.ParseMultipartForm(500 * 1024 * 1024)
+	err := ctx.Request.ParseMultipartForm(100 * 1024 * 1024)
 	if err != nil {
 		return "Error handling form!\n"
 	}
@@ -49,7 +49,7 @@ func handleUpload(ctx *web.Context, updateURL chan<- string, updateResp <-chan *
 		if err != nil {
 			return throwErr(&resFiles)
 		}
-		if size > 50*1024*1024 {
+		if size > 10 * 1024*1024 {
 			return throwErr(&resFiles)
 		}
 		//Seek back to beginning
