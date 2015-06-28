@@ -81,7 +81,7 @@ func handleDB(getURL <-chan string, getResp chan<- *Response, updateURL <-chan s
 			fmt.Println("Updated URLs")
 			//Write changes to file with timestamp for convenience
 			t := time.Now().UTC()
-			nl := s[0] + "," + s[1] + "," + t.Format("2006-01-02 15:04:05") + "\n"
+			nl := name + "," + hash + "," + t.Format("2006-01-02 15:04:05") + "\n"
 			if _, err := fout.WriteString(nl); err != nil {
 				updateResp <- &Response{status: "Failure", message: "Warning, file could not be recorded!"}
 			} else {

@@ -17,7 +17,7 @@ func main() {
 	web.Post("/api/upload", func(ctx *web.Context) string {
 		return handleUpload(ctx, updateURL, updateResp)
 	})
-	web.Get("/(.*)", func(ctx *web.Context, val string) string {
+	web.Get("/([a-z0-9]{5}.?[a-z0-9]*)", func(ctx *web.Context, val string) string {
 		return getFile(ctx, val, getURL, getResp)
 	})
 	web.Run("0.0.0.0:8080")
