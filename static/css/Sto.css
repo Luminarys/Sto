@@ -15,7 +15,7 @@
 body {
 	background-attachment: fixed, fixed;
 	background-color: #F7F7F7;
-	background-image: url('grill.php'), url('img/bg.png');
+	background-image: url('grill.php'), url('/img/bg.png');
 	background-position: 85% 100%, top left;
 	background-repeat: no-repeat, repeat;
 	color: #333;
