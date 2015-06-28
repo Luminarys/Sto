@@ -21,11 +21,11 @@ type jsonResponse struct {
 	Files   []jsonFile `json:"files"`
 }
 
-func throwErr(arr *[]jsonFile) string{
-    jsonResp := &jsonResponse{Success: false, Files: *arr}
+func throwErr(arr *[]jsonFile) string {
+	jsonResp := &jsonResponse{Success: false, Files: *arr}
 	jresp, err := json.Marshal(jsonResp)
 	if err != nil {
-	    fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	return string(jresp)
 }
@@ -47,10 +47,10 @@ func handleUpload(ctx *web.Context, updateURL chan<- string, updateResp <-chan *
 		file, err := fileHeader.Open()
 		size, err := file.Seek(0, 2)
 		if err != nil {
-            return throwErr(&resFiles)
+			return throwErr(&resFiles)
 		}
 		if size > 50*1024*1024 {
-            return throwErr(&resFiles)
+			return throwErr(&resFiles)
 		}
 		//Seek back to beginning
 		file.Seek(0, 0)
@@ -64,7 +64,7 @@ func handleUpload(ctx *web.Context, updateURL chan<- string, updateResp <-chan *
 		resp := <-updateResp
 		//Even though this is redundant, it might eventually be useful
 		if resp.status == "Failure" {
-            return throwErr(&resFiles)
+			return throwErr(&resFiles)
 		} else {
 			jFile := jsonFile{Hash: hash, Name: filename, URL: resp.message, Size: int(size)}
 			resFiles[idx] = jFile
@@ -74,15 +74,15 @@ func handleUpload(ctx *web.Context, updateURL chan<- string, updateResp <-chan *
 		if _, err := os.Stat("files/" + hash); os.IsNotExist(err) {
 			f, err := os.Create("files/" + hash)
 			if err != nil {
-                return throwErr(&resFiles)
+				return throwErr(&resFiles)
 			}
 			_, err = file.Seek(0, 0)
 			if err != nil {
-                return throwErr(&resFiles)
+				return throwErr(&resFiles)
 			}
 			_, err = io.Copy(f, file)
 			if err != nil {
-                return throwErr(&resFiles)
+				return throwErr(&resFiles)
 			}
 		}
 	}
