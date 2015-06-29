@@ -11,9 +11,9 @@ import (
 //Handles file retrieval. It uses getURL to send a hash to the urlHandler, and listens on
 //sendURL for the proper filename.
 func getFile(ctx *web.Context, file string) string {
-    dir := file[0:3]
-    fname := file[3:]
-    path := "files/" + dir + "/" + fname
+	dir := file[0:3]
+	fname := file[3:]
+	path := "files/" + dir + "/" + fname
 	//Open the file
 	f, err := os.Open(path)
 	if err != nil {

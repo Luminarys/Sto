@@ -22,11 +22,11 @@ type jsonResponse struct {
 }
 
 type urlUpdateMsg struct {
-    Name string
-    Extension string
-    Hash string
-    Size int
-    Response chan *Response
+	Name      string
+	Extension string
+	Hash      string
+	Size      int
+	Response  chan *Response
 }
 
 func throwErr(arr *[]jsonFile) string {
@@ -57,7 +57,7 @@ func handleUpload(ctx *web.Context, updateURL chan<- *urlUpdateMsg) string {
 		if err != nil {
 			return throwErr(&resFiles)
 		}
-		if size > 10 * 1024*1024 {
+		if size > 10*1024*1024 {
 			return throwErr(&resFiles)
 		}
 		//Seek back to beginning
@@ -67,10 +67,10 @@ func handleUpload(ctx *web.Context, updateURL chan<- *urlUpdateMsg) string {
 		}
 		hash := getHash(file)
 		ext := filepath.Ext(filename)
-        oname := filename[0:len(filename)-len(ext)]
+		oname := filename[0 : len(filename)-len(ext)]
 		//Send the hash and ext for updating
-	    updateResp := make(chan *Response)
-        msg := &urlUpdateMsg{Name: oname, Extension: ext, Hash: hash, Size: int(size), Response: updateResp}
+		updateResp := make(chan *Response)
+		msg := &urlUpdateMsg{Name: oname, Extension: ext, Hash: hash, Size: int(size), Response: updateResp}
 		updateURL <- msg
 		resp := <-updateResp
 		//Even though this is redundant, it might eventually be useful
@@ -79,23 +79,23 @@ func handleUpload(ctx *web.Context, updateURL chan<- *urlUpdateMsg) string {
 		} else if resp.status == "Duplicate" {
 			jFile := jsonFile{Hash: hash, Name: filename, URL: resp.message, Size: int(size)}
 			resFiles[idx] = jFile
-            //Skip creation for duplicates
-            continue
-        } else {
+			//Skip creation for duplicates
+			continue
+		} else {
 			jFile := jsonFile{Hash: hash, Name: filename, URL: resp.message, Size: int(size)}
 			resFiles[idx] = jFile
 		}
 
 		//If file doesn't already exist, create it
-        //Split up files into 3 char prefix and 3 char + ext true file name
-        //This should reduce stress on the OS's filesystem
-        dir := resp.message[0:3]
-        fname := resp.message[3:]
-        path := "files/" + dir + "/" + fname
-        //If the directory doesn't exist create it
-        if !exists("files/" + dir) {
-            os.Mkdir("files/" + dir, 0766)
-        }
+		//Split up files into 3 char prefix and 3 char + ext true file name
+		//This should reduce stress on the OS's filesystem
+		dir := resp.message[0:3]
+		fname := resp.message[3:]
+		path := "files/" + dir + "/" + fname
+		//If the directory doesn't exist create it
+		if !exists("files/" + dir) {
+			os.Mkdir("files/"+dir, 0766)
+		}
 		f, err := os.Create(path)
 		if err != nil {
 			return throwErr(&resFiles)
