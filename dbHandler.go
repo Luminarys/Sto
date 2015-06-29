@@ -15,6 +15,13 @@ type Response struct {
 //files.csv stays updated and maps URLs to hashes(the actual file names).
 //The response struct is used to handle responses
 func handleDB(updateURL <-chan *urlUpdateMsg) {
+    //Create DB if it doesn't exist
+    if !exists("./sqlite.db") {
+        success := createDB()
+        if !success {
+			panic("Fatal Error, DB could not be created")
+        }
+    }
     //Intialize the DB
     db, err := sql.Open("sqlite3", "./sqlite.db")
     if err != nil {
