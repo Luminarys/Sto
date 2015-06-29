@@ -1,11 +1,9 @@
 package main
 
 import (
-	"encoding/csv"
-	"fmt"
-	"os"
-	"strings"
-	"time"
+    "database/sql"
+    _ "github.com/mattn/go-sqlite3"
+
 )
 
 type Response struct {
@@ -16,77 +14,78 @@ type Response struct {
 //Handles DB requests by using channels with select to lock access to operations. This ensures that
 //files.csv stays updated and maps URLs to hashes(the actual file names).
 //The response struct is used to handle responses
-func handleDB(getURL <-chan string, getResp chan<- *Response, updateURL <-chan string, updateResp chan<- *Response) {
-	//Read in the CSV, then wait for updates
-	urls := make(map[string]string)
-	if _, err := os.Stat("files.csv"); os.IsNotExist(err) {
-		f, err := os.Create("files.csv")
-		if err != nil {
-			panic("Fatal Error, files.csv could not be created")
-		}
-		f.Close()
-	}
-	fin, err := os.Open("files.csv")
-	if err != nil {
-		panic("Fatal Error, files.csv could not be opened.")
-	}
-
-	reader := csv.NewReader(fin)
-	data, err := reader.ReadAll()
-	if err != nil {
-		panic("Fatal Error, files.csv is not formatted properly")
-	}
-
-	for _, col := range data {
-		urls[col[0]] = col[1]
-	}
-
-	fin.Close()
-
-	fout, err := os.OpenFile("files.csv", os.O_APPEND|os.O_WRONLY, 0660)
-	if err != nil {
-		panic("Fatal Error, files.csv could not be opened.")
-	}
-
-	defer fout.Close()
+func handleDB(updateURL <-chan *urlUpdateMsg) {
+    //Intialize the DB
+    db, err := sql.Open("sqlite3", "./sqlite.db")
+    if err != nil {
+			panic("Fatal Error, DB could not be opened")
+    }
+    defer db.Close()
 
 	//List of banned extensions
 	bannedExts := [30]string{".ade", ".adp", ".bat", ".chm", ".cmd", ".com", ".cpl", ".exe", ".hta", ".ins", ".isp", ".jse", ".lib", ".lnk", ".mde", ".msc", ".msp", ".mst", ".pif", ".scr", ".sct", ".shb", ".sys", ".vb", ".vbe", ".vbs", ".vxd", ".wsc", ".wsf", ".wsh"}
-
 	for {
 		select {
-		case read := <-getURL:
-			if val, ok := urls[read]; ok {
-				getResp <- &Response{status: "Success", message: val}
-			} else {
-				getResp <- &Response{status: "Failure", message: "File not found!"}
-			}
-		case update := <-updateURL:
-			s := strings.Split(update, ":")
-			ext := s[0]
-			for _, e := range bannedExts {
-				if ext == e {
-					updateResp <- &Response{status: "Failure", message: "This extension is banned, please try again!"}
-				}
-			}
-			hash := s[1]
-
-			//Verify that the generated name is unique
-			name := RandFileName(ext)
-			//notExists should be true
-			for _, notExists := urls[name]; notExists; name = RandFileName(ext) {
-				_, notExists = urls[name]
-			}
-			urls[name] = hash
-			fmt.Println("Updated URLs")
-			//Write changes to file with timestamp for convenience
-			t := time.Now().UTC()
-			nl := name + "," + hash + "," + t.Format("2006-01-02 15:04:05") + "\n"
-			if _, err := fout.WriteString(nl); err != nil {
-				updateResp <- &Response{status: "Failure", message: "Warning, file could not be recorded!"}
-			} else {
-				updateResp <- &Response{status: "Success", message: name}
-			}
+		case updateUrlsReq := <-updateURL:
+            //Block this operation -- Needs testing to see if the sqlite library
+            //fully supports write concurrency 
+            updateURLs(db, updateUrlsReq, &bannedExts)
 		}
 	}
+}
+
+func updateURLs (db *sql.DB, req *urlUpdateMsg, bannedExts *[30]string) {
+    ext := req.Extension
+    hash := req.Hash
+    origName := req.Name
+    size := req.Size
+    respChan := req.Response
+    //Check if the hash is already present in the DB
+    //Should this be a prepared statement? We generate the hash, so it's unlikely
+    //that this is exploitable, but it is a possibility
+    rows, err := db.Query("SELECT name FROM files WHERE hash = '" + hash + "'")
+    if rows.Next() {
+        var res string
+        rows.Scan(&res)
+		respChan <- &Response{status: "Duplicate", message: res}
+        return
+    }
+
+	for _, e := range *bannedExts {
+		if ext == e {
+			respChan <- &Response{status: "Failure", message: "This extension is banned, please try again!"}
+            return
+		}
+	}
+    //updateURLs(ext, hash)
+    //Generate random names until an available slot is there - This might need
+    //to be capped, as it could take a LONG time
+    name := ""
+    for name = RandFileName(ext); exists("files/" + name[0:3] + "/" + name[3:] ); name = RandFileName(ext) {}
+
+    tx, err := db.Begin()
+    if err != nil {
+	    respChan <- &Response{status: "Failure", message: "Database not functioning properly!"}
+        return
+    }
+
+    stmt, err := tx.Prepare("Insert into files(name, hash, origname, size) values(?, ?, ?, ?)")
+    if err != nil {
+	    respChan <- &Response{status: "Failure", message: "Database not functioning properly!"}
+        return
+    }
+    defer stmt.Close()
+
+    _, err = stmt.Exec(name, hash, origName, size)
+    if err != nil {
+	    respChan <- &Response{status: "Failure", message: "Database transaction failed!"}
+        return
+    }
+
+    tx.Commit()
+    if err != nil {
+	    respChan <- &Response{status: "Failure", message: "Database transaction failed!"}
+        return
+    }
+	respChan <- &Response{status: "Success", message: name}
 }

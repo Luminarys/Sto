@@ -1,12 +1,13 @@
 package main
 
 import (
-	"crypto/md5"
+	"crypto/sha1"
 	"fmt"
 	"io"
 	"math/rand"
 	"path/filepath"
 	"time"
+    "os"
 )
 
 //Generates a random file name and appends on the provided
@@ -23,9 +24,16 @@ func RandFileName(ext string) string {
 	return filepath.Join(name + ext)
 }
 
-//Returns MD5 hash of a provided file
-func Md5(r io.Reader) string {
-	hash := md5.New()
+//Returns hash of a provided file
+func getHash(r io.Reader) string {
+	hash := sha1.New()
 	io.Copy(hash, r)
 	return fmt.Sprintf("%x", hash.Sum(nil))
+}
+
+func exists(path string) (bool) {
+    _, err := os.Stat(path)
+    if err == nil { return true}
+    if os.IsNotExist(err) { return false}
+    return true
 }

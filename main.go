@@ -5,20 +5,15 @@ import (
 )
 
 func main() {
-	getURL := make(chan string)
-	getResp := make(chan *Response)
-	updateURL := make(chan string)
-	updateResp := make(chan *Response)
+	updateURL := make(chan *urlUpdateMsg)
 
-	go handleDB(getURL, getResp, updateURL, updateResp)
+	go handleDB(updateURL)
 
 	//Get around their func only allowing specific values
 	//to be passed by wrapping in a function and sending stuff from there
 	web.Post("/api/upload", func(ctx *web.Context) string {
-		return handleUpload(ctx, updateURL, updateResp)
+		return handleUpload(ctx, updateURL)
 	})
-	web.Get("/([a-z0-9]{6}.?[a-z0-9]*)", func(ctx *web.Context, val string) string {
-		return getFile(ctx, val, getURL, getResp)
-	})
+	web.Get("/([a-z0-9]{6}.?[a-z0-9]*)", getFile)
 	web.Run("0.0.0.0:8080")
 }

@@ -21,6 +21,14 @@ type jsonResponse struct {
 	Files   []jsonFile `json:"files"`
 }
 
+type urlUpdateMsg struct {
+    Name string
+    Extension string
+    Hash string
+    Size int
+    Response chan *Response
+}
+
 func throwErr(arr *[]jsonFile) string {
 	jsonResp := &jsonResponse{Success: false, Files: *arr}
 	jresp, err := json.Marshal(jsonResp)
@@ -32,7 +40,7 @@ func throwErr(arr *[]jsonFile) string {
 
 //Handles POST upload requests. the updateURL is used to pass messages
 //to the urlHandler indicating that the DB should be updated.
-func handleUpload(ctx *web.Context, updateURL chan<- string, updateResp <-chan *Response) string {
+func handleUpload(ctx *web.Context, updateURL chan<- *urlUpdateMsg) string {
 	//TODO: Implemente limits with settings.ini or something
 	err := ctx.Request.ParseMultipartForm(100 * 1024 * 1024)
 	if err != nil {
@@ -57,33 +65,48 @@ func handleUpload(ctx *web.Context, updateURL chan<- string, updateResp <-chan *
 		if err != nil {
 			return err.Error()
 		}
-		hash := Md5(file)
+		hash := getHash(file)
 		ext := filepath.Ext(filename)
+        oname := filename[0:len(filename)-len(ext)]
 		//Send the hash and ext for updating
-		updateURL <- ext + ":" + hash
+	    updateResp := make(chan *Response)
+        msg := &urlUpdateMsg{Name: oname, Extension: ext, Hash: hash, Size: int(size), Response: updateResp}
+		updateURL <- msg
 		resp := <-updateResp
 		//Even though this is redundant, it might eventually be useful
 		if resp.status == "Failure" {
 			return throwErr(&resFiles)
-		} else {
+		} else if resp.status == "Duplicate" {
+			jFile := jsonFile{Hash: hash, Name: filename, URL: resp.message, Size: int(size)}
+			resFiles[idx] = jFile
+            //Skip creation for duplicates
+            continue
+        } else {
 			jFile := jsonFile{Hash: hash, Name: filename, URL: resp.message, Size: int(size)}
 			resFiles[idx] = jFile
 		}
 
 		//If file doesn't already exist, create it
-		if _, err := os.Stat("files/" + hash); os.IsNotExist(err) {
-			f, err := os.Create("files/" + hash)
-			if err != nil {
-				return throwErr(&resFiles)
-			}
-			_, err = file.Seek(0, 0)
-			if err != nil {
-				return throwErr(&resFiles)
-			}
-			_, err = io.Copy(f, file)
-			if err != nil {
-				return throwErr(&resFiles)
-			}
+        //Split up files into 3 char prefix and 3 char + ext true file name
+        //This should reduce stress on the OS's filesystem
+        dir := resp.message[0:3]
+        fname := resp.message[3:]
+        path := "files/" + dir + "/" + fname
+        //If the directory doesn't exist create it
+        if !exists("files/" + dir) {
+            os.Mkdir("files/" + dir, 0766)
+        }
+		f, err := os.Create(path)
+		if err != nil {
+			return throwErr(&resFiles)
+		}
+		_, err = file.Seek(0, 0)
+		if err != nil {
+			return throwErr(&resFiles)
+		}
+		_, err = io.Copy(f, file)
+		if err != nil {
+			return throwErr(&resFiles)
 		}
 	}
 	jsonResp := &jsonResponse{Success: true, Files: resFiles}
