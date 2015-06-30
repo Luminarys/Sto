@@ -75,6 +75,8 @@ func handleUpload(ctx *web.Context, updateURL chan<- *urlUpdateMsg) string {
 		resp := <-updateResp
 		//Even though this is redundant, it might eventually be useful
 		if resp.status == "Failure" {
+			fmt.Println("Error for file: ", oname)
+			fmt.Println(resp.message)
 			return throwErr(&resFiles)
 		} else if resp.status == "Duplicate" {
 			jFile := jsonFile{Hash: hash, Name: filename, URL: resp.message, Size: int(size)}

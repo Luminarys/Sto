@@ -46,23 +46,26 @@ func updateURLs(db *sql.DB, req *urlUpdateMsg, bannedExts *[30]string) {
 	origName := req.Name
 	size := req.Size
 	respChan := req.Response
-	//Check if the hash is already present in the DB
-	//Should this be a prepared statement? We generate the hash, so it's unlikely
-	//that this is exploitable, but it is a possibility
-	rows, err := db.Query("SELECT name FROM files WHERE hash = '" + hash + "'")
-	if rows.Next() {
-		var res string
-		rows.Scan(&res)
-		respChan <- &Response{status: "Duplicate", message: res}
-		return
-	}
 
+	//Make sure that the extension is valid
 	for _, e := range *bannedExts {
 		if ext == e {
 			respChan <- &Response{status: "Failure", message: "This extension is banned, please try again!"}
 			return
 		}
 	}
+	//Check if the hash is already present in the DB
+	//Should this be a prepared statement? We generate the hash, so it's unlikely
+	//that this is exploitable, but it is a possibility
+	row, err := db.Query("SELECT name FROM files WHERE hash = '" + hash + "'")
+	defer row.Close()
+	if row.Next() {
+		var res string
+		row.Scan(&res)
+		respChan <- &Response{status: "Duplicate", message: res}
+		return
+	}
+
 	//updateURLs(ext, hash)
 	//Generate random names until an available slot is there - This might need
 	//to be capped, as it could take a LONG time
@@ -72,26 +75,26 @@ func updateURLs(db *sql.DB, req *urlUpdateMsg, bannedExts *[30]string) {
 
 	tx, err := db.Begin()
 	if err != nil {
-		respChan <- &Response{status: "Failure", message: "Database not functioning properly!"}
+		respChan <- &Response{status: "Failure", message: "Could not initiate transaction!"}
 		return
 	}
 
 	stmt, err := tx.Prepare("Insert into files(name, hash, origname, size) values(?, ?, ?, ?)")
 	if err != nil {
-		respChan <- &Response{status: "Failure", message: "Database not functioning properly!"}
+		respChan <- &Response{status: "Failure", message: "Could not create prepared statement!"}
 		return
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(name, hash, origName, size)
 	if err != nil {
-		respChan <- &Response{status: "Failure", message: "Database transaction failed!"}
+		respChan <- &Response{status: "Failure", message: "Could not execute prepared statement!"}
 		return
 	}
 
 	tx.Commit()
 	if err != nil {
-		respChan <- &Response{status: "Failure", message: "Database transaction failed!"}
+		respChan <- &Response{status: "Failure", message: "Could not commit transaction!"}
 		return
 	}
 	respChan <- &Response{status: "Success", message: name}
