@@ -5,7 +5,7 @@ A simple file uploader and sharer, based off of Pomf.se. Sto's backend is writte
 Sto requires Go, and the packages `github.com/hoisie/web` and `github.com/mattn/go-sqlite3`, as well as a valid SQLite3 installation which was compiled with enabled concurrency options.
 
 ## Setup and Running
-Either run `go run *.go` or build the go files and run the resulting executable. You will also want to create a Files directory in the cloned or downloaded github directory prior to execution. A sqlite DB will be automatically created.
+Run `make` or build the go files yourself. The Sto executable can be run with the option `-p` which will allow you to choose your own port. If this option is not used, Sto will default to the port 8080
 To configure Nginx, the following location block should be utilized: 
 ```
 location / {
