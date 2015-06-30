@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha1"
+    "hash"
 	"database/sql"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
@@ -29,8 +30,44 @@ func RandFileName(ext string) string {
 //Returns hash of a provided file
 func getHash(r io.Reader) string {
 	hash := sha1.New()
-	io.Copy(hash, r)
+
+	// 2 channels: used to give green light for reading into buffer b1 or b2
+	readch1, readch2 := make(chan int, 1), make(chan int, 1)
+
+	// 2 channels: used to give green light for hashing the content of b1 or b2
+	hashch1, hashch2 := make(chan int, 1), make(chan int, 1)
+
+	// Start signal: Allow b1 to be read and hashed
+	readch1 <- 1
+	hashch1 <- 1
+
+	go hashHelper(r, hash, readch1, readch2, hashch1, hashch2)
+
+	hashHelper(r, hash, readch2, readch1, hashch2, hashch1)
+
 	return fmt.Sprintf("%x", hash.Sum(nil))
+}
+
+func hashHelper(r io.Reader, h hash.Hash, mayRead <-chan int, readDone chan<- int, mayHash <-chan int, hashDone chan<- int) {
+	for b, hasMore := make([]byte, 64<<10), true; hasMore; {
+		<-mayRead
+		n, err := r.Read(b)
+		if err != nil {
+			if err == io.EOF {
+				hasMore = false
+			} else {
+				panic(err)
+			}
+		}
+		readDone <- 1
+
+		<-mayHash
+		_, err = h.Write(b[:n])
+		if err != nil {
+			panic(err)
+		}
+		hashDone <- 1
+	}
 }
 
 func exists(path string) bool {

@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/hoisie/web"
+    "flag"
+    "os"
 )
 
 func main() {
