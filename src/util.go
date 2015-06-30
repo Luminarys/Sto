@@ -2,10 +2,10 @@ package main
 
 import (
 	"crypto/sha1"
-    "hash"
 	"database/sql"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
+	"hash"
 	"io"
 	"math/rand"
 	"os"

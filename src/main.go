@@ -1,9 +1,9 @@
 package main
 
 import (
+	"flag"
 	"github.com/hoisie/web"
-    "flag"
-    "os"
+	"os"
 )
 
 func startUp() {
@@ -14,12 +14,12 @@ func startUp() {
 			panic("Fatal Error, DB could not be created")
 		}
 	}
-    //Create Files/ if it doesn't exist
-    if !exists("./files/") {
-        os.Mkdir("files/", 0766)
-    }
+	//Create Files/ if it doesn't exist
+	if !exists("./files/") {
+		os.Mkdir("files/", 0766)
+	}
 
-    //Set route handlers
+	//Set route handlers
 	updateURL := make(chan *urlUpdateMsg)
 	go handleDB(updateURL)
 
@@ -30,10 +30,10 @@ func startUp() {
 }
 
 func main() {
-    port := flag.String("p", "8080", "The port that Sto should listen on. By default it is 8080")
-    flag.Parse()
+	port := flag.String("p", "8080", "The port that Sto should listen on. By default it is 8080")
+	flag.Parse()
 
-    startUp()
+	startUp()
 
-    web.Run("0.0.0.0:" + *port)
+	web.Run("0.0.0.0:" + *port)
 }
