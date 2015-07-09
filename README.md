@@ -17,8 +17,8 @@ location / {
 
 ## Running
 The Sto executable can be run with the options:
-    * `-port=8080` - If set this will cause Sto to listen on the specified port
-    * `-procs=1` - If set this will cause Sto to run with the specified number of processes. The minimum recommended number is two, but one is the default
+* `-port=<port number>` - If set this will cause Sto to listen on the specified port. 8080 is the default.
+* `-procs=<maximum number of cpus to use>` - If set this will cause Sto to run with the specified number of processes. The minimum recommended number is two, but one is the default.
 
 ## Performance
 A benchmark using JMeter and attempting to upload 10 files at a time yielded the following results:
