@@ -5,7 +5,7 @@ A simple file uploader and sharer, based off of Pomf.se. Sto's backend is writte
 Sto requires Go, git, and the packages `github.com/hoisie/web` and `github.com/mattn/go-sqlite3`, as well as a valid SQLite3 installation which was compiled with enabled concurrency options. Both of the Go dependencies will be automatically installed by the Makefile, but they can be manually gotten if necessary.
 
 ## Setup and Installation
-Run `make` to build the files into an executable. All dependencies will be automatically installed and the `GOPATH` variable automatically set to `~/Gopath` if it doesn't exist. Please ensure that git is present on the system.
+Run `make` to build the files into an executable. All dependencies will be automatically installed and the `GOPATH` variable automatically set to `~/Gopath` if it doesn't exist. Please ensure that git is present on the system in order for `go get` to properly work.
 To configure Nginx, the following location block should be utilized: 
 ```
 location / {
@@ -18,7 +18,7 @@ location / {
 ## Running
 The Sto executable can be run with the options:
 * `-port=<port number>` - If set this will cause Sto to listen on the specified port. 8080 is the default.
-* `-procs=<maximum number of cpus to use>` - If set this will cause Sto to run with the specified number of processes. The minimum recommended number is two, but one is the default.
+* `-procs=<maximum number of cpus to use>` - If set this will cause Sto to run with the specified number of processes. The minimum recommended number is 2, but 1 is the default.
 
 ## Performance
 A benchmark using JMeter and attempting to upload 10 files at a time yielded the following results:
