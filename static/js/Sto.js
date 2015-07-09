@@ -1,3 +1,5 @@
+/*! pomf (https://github.com/nokonoko/Pomf.git) @ 2015-07-09 */
+
 $(function () {
 	var uploadInput = $('#upload-input')
 	  , uploadBtn = $('#upload-btn')

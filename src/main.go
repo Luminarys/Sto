@@ -31,8 +31,8 @@ func startUp() {
 }
 
 func main() {
-	port := flag.String("port", "8080", "The port that Sto should listen on. By default it is 8080")
-	procs := flag.Int("procs", 1, "The maximum number of processes that can be used by Go")
+	port := flag.String("port", "8080", "The port that Sto should listen on. By default it is 8080.")
+	procs := flag.Int("procs", 1, "The maximum number of processes that can be used by Go. The default value is one, but at least two are recommended in order to maximize performance.")
 	flag.Parse()
 
 	if *procs > runtime.NumCPU() {

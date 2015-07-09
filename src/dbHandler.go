@@ -29,7 +29,7 @@ func handleDB(updateURL <-chan *urlUpdateMsg) {
 	}
 	defer db.Close()
 
-	writeData := make(chan *writeMsg, 10)
+	writeData := make(chan *writeMsg, 1000)
 
 	//List of banned extensions
 	bannedExts := [30]string{".ade", ".adp", ".bat", ".chm", ".cmd", ".com", ".cpl", ".exe", ".hta", ".ins", ".isp", ".jse", ".lib", ".lnk", ".mde", ".msc", ".msp", ".mst", ".pif", ".scr", ".sct", ".shb", ".sys", ".vb", ".vbe", ".vbs", ".vxd", ".wsc", ".wsf", ".wsh"}
@@ -84,8 +84,8 @@ func updateURLs(db *sql.DB, req *urlUpdateMsg, bannedExts *[30]string, writeReq 
 	for name = RandFileName(ext); exists("files/" + name[0:3] + "/" + name[3:]); name = RandFileName(ext) {
 	}
 	//The channel is buffered so this should be responded to almost instantly
-	writeReq <- &writeMsg{name: name, origName: origName, hash: hash, size: size}
 	respChan <- &Response{status: "Success", message: name}
+	writeReq <- &writeMsg{name: name, origName: origName, hash: hash, size: size}
 }
 
 func writeToDB(db *sql.DB, info *writeMsg) {
