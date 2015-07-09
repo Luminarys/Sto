@@ -35,6 +35,6 @@ func getFile(ctx *web.Context, file string) string {
 	//But the Webgo content setter needs to be used too
 	//In addition, ServeFile doesn't work, ServeContent has to be used
 	ctx.ContentType(mime)
-	http.ServeContent(ctx.ResponseWriter, ctx.Request, "files/"+fname, time.Now(), f)
+	http.ServeContent(ctx.ResponseWriter, ctx.Request, path, time.Now(), f)
 	return ""
 }

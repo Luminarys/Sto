@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/hoisie/web"
 	"os"
+    "runtime"
 )
 
 func startUp() {
@@ -19,10 +20,10 @@ func startUp() {
 		os.Mkdir("files/", 0766)
 	}
 
-	//Set route handlers
 	updateURL := make(chan *urlUpdateMsg)
 	go handleDB(updateURL)
 
+	//Set route handlers
 	web.Post("/api/upload", func(ctx *web.Context) string {
 		return handleUpload(ctx, updateURL)
 	})
@@ -30,9 +31,14 @@ func startUp() {
 }
 
 func main() {
-	port := flag.String("p", "8080", "The port that Sto should listen on. By default it is 8080")
+	port := flag.String("port", "8080", "The port that Sto should listen on. By default it is 8080")
+	procs := flag.Int("procs", 1, "The maximum number of processes that can be used by Go")
 	flag.Parse()
 
+    if *procs > runtime.NumCPU() {
+        panic("Fatal error: You tried to use more processes than there are CPUs available")
+    }
+    runtime.GOMAXPROCS(*procs)
 	startUp()
 
 	web.Run("0.0.0.0:" + *port)
