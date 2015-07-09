@@ -12,10 +12,10 @@ type Response struct {
 }
 
 type writeMsg struct {
-	name      string
-	origName      string
-	hash      string
-	size      int
+	name     string
+	origName string
+	hash     string
+	size     int
 }
 
 //Handles DB requests by using channels with select to lock access to operations. This ensures that
@@ -36,11 +36,11 @@ func handleDB(updateURL <-chan *urlUpdateMsg) {
 	for {
 		select {
 		case updateUrlsReq := <-updateURL:
-            //Since this operation will only do DB reads, we can make it concurrent
+			//Since this operation will only do DB reads, we can make it concurrent
 			go updateURLs(db, updateUrlsReq, &bannedExts, writeData)
-        case writeReq := <-writeData:
+		case writeReq := <-writeData:
 			//Block this operation since it involves actual writes
-            writeToDB(db, writeReq)
+			writeToDB(db, writeReq)
 		}
 	}
 }
@@ -65,10 +65,10 @@ func updateURLs(db *sql.DB, req *urlUpdateMsg, bannedExts *[30]string, writeReq 
 	row, err := db.Query("SELECT name FROM files WHERE hash = '" + hash + "'")
 	defer row.Close()
 
-    if err != nil {
+	if err != nil {
 		respChan <- &Response{status: "Failure", message: "Could not query DB!"}
-        return
-    }
+		return
+	}
 
 	if row.Next() {
 		var res string
@@ -83,12 +83,12 @@ func updateURLs(db *sql.DB, req *urlUpdateMsg, bannedExts *[30]string, writeReq 
 	name := ""
 	for name = RandFileName(ext); exists("files/" + name[0:3] + "/" + name[3:]); name = RandFileName(ext) {
 	}
-    //The channel is buffered so this should be responded to almost instantly
-    writeReq <- &writeMsg{name: name, origName: origName, hash: hash, size: size}
+	//The channel is buffered so this should be responded to almost instantly
+	writeReq <- &writeMsg{name: name, origName: origName, hash: hash, size: size}
 	respChan <- &Response{status: "Success", message: name}
 }
 
-func writeToDB(db *sql.DB, info *writeMsg){
+func writeToDB(db *sql.DB, info *writeMsg) {
 	tx, err := db.Begin()
 	if err != nil {
 		//respChan <- &Response{status: "Failure", message: "Could not initiate transaction!"}

@@ -73,7 +73,7 @@ func handleUpload(ctx *web.Context, updateURL chan<- *urlUpdateMsg) string {
 		msg := &urlUpdateMsg{Name: oname, Extension: ext, Hash: hash, Size: int(size), Response: updateResp}
 		updateURL <- msg
 		resp := <-updateResp
-        close(updateResp)
+		close(updateResp)
 		//Even though this is redundant, it might eventually be useful
 		if resp.status == "Failure" {
 			fmt.Println("Error for file: ", oname)

@@ -4,7 +4,7 @@ import (
 	"flag"
 	"github.com/hoisie/web"
 	"os"
-    "runtime"
+	"runtime"
 )
 
 func startUp() {
@@ -35,10 +35,10 @@ func main() {
 	procs := flag.Int("procs", 1, "The maximum number of processes that can be used by Go")
 	flag.Parse()
 
-    if *procs > runtime.NumCPU() {
-        panic("Fatal error: You tried to use more processes than there are CPUs available")
-    }
-    runtime.GOMAXPROCS(*procs)
+	if *procs > runtime.NumCPU() {
+		panic("Fatal error: You tried to use more processes than there are CPUs available")
+	}
+	runtime.GOMAXPROCS(*procs)
 	startUp()
 
 	web.Run("0.0.0.0:" + *port)
