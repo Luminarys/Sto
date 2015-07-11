@@ -6,14 +6,14 @@ import (
 )
 
 type loginResponse struct {
-	Success bool       `json:"success"`
-	Files   []jsonFile `json:"files"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
 }
 
 type loginReq struct {
-	User      string
-    Password    string
-	Response  chan *Response
+	User     string
+	Password string
+	Response chan *Response
 }
 
 /* func throwErr(arr *[]jsonFile) string {
@@ -27,15 +27,19 @@ type loginReq struct {
 
 //Handles logins
 func handleLogin(ctx *web.Context, login chan<- *loginReq) string {
-    ctx.Request.ParseMultipartForm(4096)
-    form := ctx.Request.MultipartForm
-    user := form.Value["username"][0]
-    password := form.Value["password"][0]
+	session := getSession(ctx, manager)
+	ctx.Request.ParseMultipartForm(4096)
+	form := ctx.Request.MultipartForm
+	user := form.Value["username"][0]
+	password := form.Value["password"][0]
 
 	loginResp := make(chan *Response)
 	req := &loginReq{User: user, Password: password, Response: loginResp}
 	login <- req
 	resp := <-loginResp
 	close(loginResp)
-    return resp.message;
+	if resp.status == "Success" {
+		session.Value = &User{user, password}
+	}
+	return resp.message
 }

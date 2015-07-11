@@ -3,9 +3,19 @@ package main
 import (
 	"flag"
 	"github.com/hoisie/web"
+	"github.com/mattn/go-session-manager"
+	"log"
 	"os"
 	"runtime"
 )
+
+var manager = session.NewSessionManager(logger)
+var logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
+
+type User struct {
+	Username string
+	Password string
+}
 
 func startUp() {
 	//Create DB if it doesn't exist
@@ -19,6 +29,15 @@ func startUp() {
 	if !exists("./files/") {
 		os.Mkdir("files/", 0766)
 	}
+
+	manager.OnStart(func(session *session.Session) {
+		logger.Printf("Start session(\"%s\")", session.Id)
+	})
+	manager.OnEnd(func(session *session.Session) {
+		logger.Printf("End session(\"%s\")", session.Id)
+	})
+
+	web.Config.CookieSecret = "ayyyLmao"
 
 	updateURL := make(chan *urlUpdateMsg)
 	login := make(chan *loginReq)

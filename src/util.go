@@ -4,6 +4,8 @@ import (
 	"crypto/sha1"
 	"database/sql"
 	"fmt"
+	"github.com/hoisie/web"
+	"github.com/mattn/go-session-manager"
 	_ "github.com/mattn/go-sqlite3"
 	"hash"
 	"io"
@@ -107,4 +109,12 @@ func createDB() bool {
 	}
 
 	return true
+}
+
+func getSession(ctx *web.Context, manager *session.SessionManager) *session.Session {
+	id, _ := ctx.GetSecureCookie("SessionId")
+	session := manager.GetSessionById(id)
+	ctx.SetSecureCookie("SessionId", session.Id, int64(manager.GetTimeout()))
+	ctx.SetHeader("Pragma", "no-cache", true)
+	return session
 }

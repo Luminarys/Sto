@@ -2,8 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	_ "github.com/mattn/go-sqlite3"
-    "fmt"
 )
 
 //Generic response template that will be sent to functions requesting DB operations
@@ -22,7 +22,7 @@ type writeMsg struct {
 //Handles DB requests by using channels with select to lock access to operations. This ensures that
 //files.csv stays updated and maps URLs to hashes(the actual file names).
 //The response struct is used to handle responses
-func handleDB(updateURL <-chan *urlUpdateMsg,login <-chan *loginReq) {
+func handleDB(updateURL <-chan *urlUpdateMsg, login <-chan *loginReq) {
 	//Intialize the DB
 	db, err := sql.Open("sqlite3", "./sqlite.db")
 	if err != nil {
@@ -42,31 +42,31 @@ func handleDB(updateURL <-chan *urlUpdateMsg,login <-chan *loginReq) {
 		case req := <-writeData:
 			//Block this operation since it involves actual writes
 			writeToDB(db, req)
-        case req := <-login:
-            checkLogin(db, req)
+		case req := <-login:
+			checkLogin(db, req)
 		}
 	}
 }
 
 func checkLogin(db *sql.DB, req *loginReq) {
 	respChan := req.Response
-    user := req.User
-    rPass := req.Password
-    fmt.Println(user)
+	user := req.User
+	rPass := req.Password
+	fmt.Println(user)
 	stmt, err := db.Prepare("SELECT password FROM users WHERE username = ?")
 	defer stmt.Close()
 
-    var password string
-    err = stmt.QueryRow(user).Scan(&password)
+	var password string
+	err = stmt.QueryRow(user).Scan(&password)
 	if err != nil {
 		respChan <- &Response{status: "Failure", message: "User not found"}
 		return
 	}
 
-    if rPass != password {
+	if rPass != password {
 		respChan <- &Response{status: "Failure", message: "The passwords do not match!"}
-        return
-    }
+		return
+	}
 	respChan <- &Response{status: "Success", message: "Logged in!"}
 }
 
@@ -91,7 +91,7 @@ func updateURLs(db *sql.DB, req *urlUpdateMsg, bannedExts *[30]string, writeReq 
 	defer row.Close()
 
 	if err != nil {
-        respChan <- &Response{status: "Failure", message: "Could not query DB! Error:" + err.Error()}
+		respChan <- &Response{status: "Failure", message: "Could not query DB! Error:" + err.Error()}
 		return
 	}
 
