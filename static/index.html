@@ -1,49 +1,109 @@
-<!DOCTYPE html>
-<!--
-pomf (https://github.com/nokonoko/Pomf.git) @ 2015-07-09
--->
 <html>
-
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Sto &middot; Fast File Hosting</title>
-    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="css/Sto.css">
+  <title>Fuwa.se</title>
+  <link rel="stylesheet" href="materialize/css/materialize.min.css">
+  <link rel="stylesheet" href="ss.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 </head>
-
 <body>
-    <div class="container">
-        <div class="jumbotron">
-            <h1>Ohayou!</h1>
-            <p class="lead">Max upload size is 10MiB, read the <a href="faq.html">FAQ</a>
-            </p>
-            <noscript>
-                <p class="alert alert-error"><strong>Enable JavaScript</strong> you neckbeard, it's not gonna hurt you</p>
-            </noscript>
-            <p id="no-file-api" class="alert alert-error"><strong>Your browser is shit.</strong> Install the latest<a href="http://firefox.com/">Firefox</a> or <a 
-href="http://chrome.google.com/">Botnet</a> and come back &lt;3</p><a href="javascript:;" id="upload-btn" class="btn">Select <span>or drop</span>file(s)</a>
-            <input type="file" id="upload-input" name="files[]" multiple="multiple" data-max-size="50MiB">
-            <ul id="upload-filelist"></ul>
+  <script type="text/javascript" src="jquery/jquery-2.1.1.min.js"></script>
+  <script type="text/javascript" src="materialize/js/materialize.min.js"></script>
+  <script type="text/javascript" src="upload.js" ></script>
+  <script type="text/javascript" src="palette.js" ></script>
+  <div class="container" style="margin-top: 2%; margin-bottom: 1%;">
+
+  <div id="afterthis" class="row center-align" style="margin-bottom: 0%;">
+  <div class="col s12 l6 offset-l3 m8 offset-m2">
+  <div class="fileupload">
+    <div class="card blue-grey darken-1 z-depth-2">
+      <div class="card-content white-text" style="padding-bottom: 0%;" id="dropzone">
+        <span class="card-title" style="font-size: 3rem;">Fuwa.se</span>
+        <p style="margin-top: 3%; margin-bottom: 3%;">Up to 50MiB of your data. Select a file or drag it into here.</p>
+        <noscript>
+        <p style="margin-top: 3%; margin-bottom: 3%;">Enable Javascript you neckbeard. It's not gonna hurt.</p>
+        </noscript>
+        <form class="center-block" method="POST" enctype="multipart/form-data" id="mainform">
+          <span id="select-button" class="btn btn-default btn-file waves-effect waves-light teal darken-1">
+            Select
+            <input type="file" name="file[]" multiple id="files">
+          </span>
+          <span class="hide-on-med-and-up"><br/><br/></span>
+          <button class="btn btn-file teal darken-1 waves-effect waves-light" type="submit" id="sub">Upload
+          <i class="mdi-content-send right hide-on-small-only"></i></button>
+          <br/>
+		  <div id="fileDisplay" style="display:none;"  class="card-content grey-text">
+			<p>File selected:</p>
+		  </div>
+          <a class="waves-effect waves-light btn-flat about" id="button-about" href="#toggled">About</a>
+          <a class="waves-effect waves-light btn-flat about" href="/transparency">Transparency</a>
+          <a class="waves-effect waves-light btn-flat about" id="button-palette">Colors</a>
+        </form>
+      </div>
+    </div>
+    </div>
+    </div>
+
+    <div class="row" id="palette-main" style="display: none;">
+    <div class="col s12 l6 offset-l3 m8 offset-m2">
+    <div class="card blue-grey darken-1 z-depth-2">
+      <div class="card-content white-text" style="padding-bottom: 0%;">
+        <div class="card-title" style="font-size: 3rem; margin-bottom: 3%;">Color Palette</div>
+        
+        <div class="palette-wrap">
+            <span class="palette-box red"></span>
+            <span class="palette-box pink"></span>
+            <span class="palette-box purple"></span>
+            <span class="palette-box deep-purple"></span>
+            <span class="palette-box indigo"></span>
+            <span class="palette-box blue"></span>
+            <span class="palette-box light-blue"></span>
+            <span class="palette-box cyan"></span>
+            <span class="palette-box teal"></span>
+            <span class="palette-box green"></span>
+            <span class="palette-box light-green"></span>
+            <span class="palette-box lime"></span>
+            <span class="palette-box yellow"></span>
+            <span class="palette-box amber"></span>
+            <span class="palette-box orange"></span>
+            <span class="palette-box deep-orange"></span>
+            <span class="palette-box brown"></span>
+            <span class="palette-box grey"></span>
+            <span class="palette-box blue-grey"></span>
+            <span class="palette-end white">Pick 2.</span>
         </div>
-        <nav>
-            <ul>
-                <li><a href="http://pomf.se/">Sto</a>
-                </li>
-                <li><a href="https://twitter.com/IdleActivities">Twitter</a>
-                </li>
-                <li><a href="https://github.com/Luminarys/Sto">Github</a>
-                </li>
-                <li><a href="tools.html">Tools</a>
-                </li>
-            </ul>
-        </nav>
-        <script src="js/libs.js"></script>
-        <script src="js/Sto.js"></script>
-        <script src="js/grill.js"></script>
+      </div>
+    </div>
+    </div>
+    </div>
+    </div>
+
+    
+    <!-- MODAL BEGIN -->
+    <div id="aboutmodal" class="modal modal-fixed-footer">
+      <div class="modal-content">
+        <h4>FAQ</h4>
+          <ul>
+            <li>Fuwa.se is a simple file hoster, inspired by pomf.se</li>
+            <li>Files may be uploaded via the web interface or by sending a POST request to fuwa.se/api/upload with the file[] key.</li>
+            <li>The max file size for now is 50 MiB, though this may increase later.</li>
+            <li>You may use the short link or the long one with the same effect.</li>
+            <li>Don't upload anything illegal, this includes malware and child porn.</li>
+            <li>Executable files with certain extensions will not be allowed. See <a href="https://support.google.com/mail/answer/6590">this</a> article for reference.</li>
+            <li>Viruses will be scanned for and removed on a regular basis</li>
+            <li>To request the removal of a file, please email <a href=mailto:abuse@fuwa.se>abuse@fuwa.se</a></li>
+          </ul>
+          <br/>
+          <h4>Contact</h4>
+          <p>You can contact me via <a href=https://twitter.com/IdleActivities>Twitter</a> or <a href=mailto:luminarys@fuwa.se>email</a></p>
+          <br/>
+          <h4>GitHub</h4>
+          <p>You can contribute to the project at <a href="https://github.com/Guad/fuwa">https://github.com/guad/fuwa</a>
+      </div>
+      <div class="modal-footer">
+        <a href="#!" class="modal-action modal-close waves-effect waves-green btn-flat ">Close</a>
+      </div>
+    </div>
+    <!-- MODAL END -->
     </div>
 </body>
-
 </html>
-
-
