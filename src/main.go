@@ -21,11 +21,15 @@ func startUp() {
 	}
 
 	updateURL := make(chan *urlUpdateMsg)
-	go handleDB(updateURL)
+	login := make(chan *loginReq)
+	go handleDB(updateURL, login)
 
 	//Set route handlers
 	web.Post("/api/upload", func(ctx *web.Context) string {
 		return handleUpload(ctx, updateURL)
+	})
+	web.Post("/login", func(ctx *web.Context) string {
+		return handleLogin(ctx, login)
 	})
 	web.Get("/([a-z0-9]{6}.?[a-z0-9]*)", getFile)
 }

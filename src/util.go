@@ -96,5 +96,15 @@ func createDB() bool {
 	if err != nil {
 		return false
 	}
+
+	sqlStmt = `
+    CREATE TABLE users 
+    (id integer primary key, username text, password text, salt text);
+    `
+	_, err = db.Exec(sqlStmt)
+	if err != nil {
+		return false
+	}
+
 	return true
 }

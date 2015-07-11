@@ -1,5 +1,5 @@
 build: check-deps
-	go build -o Sto src/main.go src/dbHandler.go src/getHandling.go src/postHandling.go src/util.go
+	go build -o Sto src/main.go src/dbHandler.go src/getHandling.go src/uploadHandling.go src/util.go src/loginHandling.go
 
 check-deps:
 	if test -z "$$GOPATH"; then \
