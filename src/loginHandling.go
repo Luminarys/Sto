@@ -1,7 +1,7 @@
 package main
 
 import (
-	//"encoding/json"
+	"encoding/json"
 	"github.com/hoisie/web"
 )
 
@@ -40,6 +40,12 @@ func handleLogin(ctx *web.Context, login chan<- *loginReq) string {
 	close(loginResp)
 	if resp.status == "Success" {
 		session.Value = &User{user, password}
+		loginResp := &loginResponse{Success: true, Message: resp.message}
+		lresp, _ := json.Marshal(loginResp)
+		return string(lresp)
+	} else {
+		loginResp := &loginResponse{Success: false, Message: resp.message}
+		lresp, _ := json.Marshal(loginResp)
+		return string(lresp)
 	}
-	return resp.message
 }

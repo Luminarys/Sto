@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -52,7 +51,6 @@ func checkLogin(db *sql.DB, req *loginReq) {
 	respChan := req.Response
 	user := req.User
 	rPass := req.Password
-	fmt.Println(user)
 	stmt, err := db.Prepare("SELECT password FROM users WHERE username = ?")
 	defer stmt.Close()
 

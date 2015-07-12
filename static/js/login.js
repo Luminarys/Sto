@@ -14,7 +14,14 @@ $(document).ready(function() {
             processData: false,
             contentType: false,
             success: function(data) {
-                alert(data);
+                var resp = JSON.parse(data);
+                if(resp.success){
+                    alert("Success!");
+                }else{
+                    $("#error-msg").remove();
+                    $(".card-content").prepend("<span id='error-msg' class='red-text text-darken-1'>" + resp.message + "</span>");
+
+                }
             }
         });
     });
